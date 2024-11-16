@@ -9,8 +9,10 @@
 # User-specific files
 .Ruserdata
 /data/
+/old_versions/
 /renv/
 renv.lock
+.Rprofile
 
 # Example code in package build process
 *-Ex.R
