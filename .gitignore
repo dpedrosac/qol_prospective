@@ -8,6 +8,9 @@
 
 # User-specific files
 .Ruserdata
+/data/
+/renv/
+renv.lock
 
 # Example code in package build process
 *-Ex.R
