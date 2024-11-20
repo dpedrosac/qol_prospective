@@ -1,4 +1,5 @@
-# ==================================================================================================
+# Create TableOne (QoL-study of subjects with PD (data_analysis.R))
+
 ## Part 1: Create TableOne for participants
 
 # 1.1: Helper function: recodes variables as factors
@@ -17,11 +18,11 @@ df_tableone <- df_recoded
 
 # 1.2: Recode Part A and Part B variables to factors
 factor_vars_partA <- c(	"age_r", "sex_r", "living_area_r", 
-			"education_r_r", "financial_stability_r_r", "family_status_r_r", 
-			"living_situation_r_r")
+                        "education_r_r", "financial_stability_r_r", "family_status_r_r", 
+                        "living_situation_r_r")
 factor_vars_partB <- c(	"who5_depr_r", "comorb_r", "time_from_diagnosis_r", 
-			"age_at_diagnosis_r", "disturbances_sleep_APD", "falls_r", 
-			"assist_mov_r", "ms_fluctuation_APD")
+                        "age_at_diagnosis_r", "disturbances_sleep_APD", "falls_r", 
+                        "assist_mov_r", "ms_fluctuation_APD")
 
 df_tableone <- recode_factors(df_tableone, factor_vars_partA)
 df_tableone <- recode_factors(df_tableone, factor_vars_partB)
@@ -37,12 +38,13 @@ levels_labels <- list(
   living_area_r = list(levels = c("1", "2", "3"), labels = c("Large city", "Medium-small city", "Rural area")),
   
   who5_depr_r = list(levels = c("0", "1"), labels = c("No depression", "Impaired quality of life")),
-  comorb_r = list(levels = c("1", "2"), labels = c("Present", "Not present")),
+  comorb_r = list(levels = c("1", "2"), labels = c("Not Present", "Present")),
   time_from_diagnosis_r = list(levels = c("1", "2", "3", "4", "5"), labels = c("<2 years", "2-5 years", "5-10 years", "10-15 years", ">15 years")),
   age_at_diagnosis_r = list(levels = c("1", "2"), labels = c("<50 years", "≥50 years")),
   disturbances_sleep_APD = list(levels = c("0", "1"), labels = c("No", "Yes")),
   ms_fluctuation_APD = list(levels = c("0", "1"), labels = c("No", "Yes")),
-  assist_mov_r = list(levels = c("0", "1"), labels = c("No assisted movement", "Assisted movement"))
+  assist_mov_r = list(levels = c("0", "1"), labels = c("No assisted movement", "Assisted movement")),
+  falls_r = list(levels = c("1", "2"), labels = c("No", "Yes"))
 )
 
 df_tableone <- recode_factors(df_tableone, names(levels_labels), levels_labels)
@@ -50,12 +52,12 @@ df_tableone <- recode_factors(df_tableone, names(levels_labels), levels_labels)
 # 1.4: Select variables and create labels for TableOne
 Vars <- c("age", "age_r", "sex", "education_r_r", "financial_stability_r_r", "family_status_r_r", 
           "living_situation_r_r", "living_area_r", "who5_depr_r", "comorb_r", "age_at_diagnosis_r", 
-          "time_from_diagnosis_r", "disturbances_sleep_APD", "ms_fluctuation_APD", "assist_mov_r")
+          "time_from_diagnosis_r", "disturbances_sleep_APD", "ms_fluctuation_APD", "assist_mov_r", "falls_r")
 
 colnames_Vars <- c("Age", "Age categorized", "Gender", "Education level", "Financial stability", 
                    "Family status", "Household situation", "Living area", "Depression", "Comorbidity", 
                    "Age at diagnosis", "Time since diagnosis", "Sleep disturbances", 
-                   "Motor symptoms fluctuation", "Assisted movement")
+                   "Motor symptoms fluctuation", "Assisted movement", "Falls")
 
 # 1.5: TableOne function
 create_table_one <- function(df, vars, colnames_vars, factor_vars) {
@@ -84,5 +86,3 @@ export_table_one <- function(results, filename = "Table1.xlsx") {
 }
 
 export_table_one(results.tableOne)
-
-

@@ -192,7 +192,7 @@ df_recoded <- df_recoded %>% rec(who5_depr, rec = "13:25=0[no signs for depressi
 
 # Comorbidity (comorb)
 df_recoded <- df_recoded %>%
-  mutate(comorb_r = as.numeric(rec(comorb, rec = "1=1[Present];2=2[Not present];-9=NA", var.label = "Comorbidity yes or no", to.factor = T)))
+  mutate(comorb_r = as.numeric(rec(comorb, rec = "1=2[Present];2=1[Not present];-9=NA", var.label = "Comorbidity yes or no", to.factor = T)))
 
 
 # Time from diagnosis (time_from_diagnosis)
@@ -211,7 +211,7 @@ df_recoded <- df_recoded %>% mutate(disturbances_sleep_APD = rec(B012_10, rec = 
 
 # Repeated falls (falls)
 df_recoded <- df_recoded %>% 
-  mutate(falls_r = rec(falls, rec = "1=1[Yes];2=2[No]"))
+  mutate(falls_r = rec(falls, rec = "1=2[Yes];2=1[No]"))
 
 # Assisted moving
 df_recoded <- df_recoded %>%

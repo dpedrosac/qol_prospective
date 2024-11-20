@@ -2,7 +2,7 @@
 # Parkinson's disease; 
 # Code developed by Leonie Moormann and David Pedrosa
 
-# Version 2.3 # 2024-16-11, # minor changes aand new proposed structure
+# Version 2.3 # 2024-19-11, # Smaller adjustments in code for biplot (EFA) and in code for x-axis (correlation matrix EFA), smaller adjustments in OR
 # Version 2.2 # 2024-12-11, # OR with binomial GLM, visualization of OR
 # Version 2.1 # 2024-11-11, # Smaller adjustments in TableOne, visualization of health-care conditions, PartD and E
 # Version 2.0 # 2024-10-11, # Adding visualization of TableOne and EFA
@@ -43,87 +43,21 @@ df_raw <- readxl::read_xlsx(path = file.path(data_dir, "data_QoL_fin.xlsx"),
   skip = 1,.name_repair = "unique"
   )
 
+
 source("recode_variables.R")
 view_df(df_recoded)
+
 
 # ==================================================================================================
 ## Part 1: Create TableOne for participants
 source("CreateTableOne.R")
 
+table(df_raw$comorb)
+table(df_recoded$comorb_r)
+
 ## =================================================================================================
 # Preamble further analysis: Data imputation using the MICE package with a multivariate approach
-
-df_before_imputation <- df_recoded %>%
-  dplyr::select(
-    age_r, sex_r, living_area_r, education_r_r, financial_stability_r, 
-    family_status_r_r, living_situation_r_r, age_at_diagnosis_r, 
-    time_from_diagnosis_r, who5_depr_r, comorb_r, disturbances_sleep_APD, 
-    falls_r, assist_mov_r, ms_fluctuation_APD, qol_sum_disease_r, 
-    qol_ms_r, qol_nms_r, qol_conditions_r, qol_gain_r, qol_loss_independence_r, 
-    qol_unpredict_r, qol_invasive_therapy_r, qol_other_therapy_r, 
-    qol_effect_medication_r, qol_taking_medication_r, qol_family_contact_r, 
-    qol_friends_contact_r, qol_affectp_contact_r, qol_support_yes_r, 
-    qol_stigma_r, qol_leisure_yes_r, qol_finances_r, qol_badmob_r, 
-    qol_badadl_r, qol_sum_ident_r, qol_feeling_needed_r, qol_thoughts_future_r, 
-    qol_self_image_r, qol_religion_r
-  ) 
-
-# Percentage of the data that is missing!
-total_missing <- sum(is.na(df_before_imputation))
-total_values <- prod(dim(df_before_imputation))
-missing_percentage <- (total_missing / total_values) * 100
-
-# Output the percentage of missing values
-cat("Percentage of missing valus in selected variables for analysis:", missing_percentage, "%\n")
-
-pdf(file.path(getwd(), "results", "suppl_fig1.aggr_plot_output.pdf"), width = 11, height = 8.5)  # Save the aggr plot output to a PDF file in landscape orientation
-
-aggr_plot <- aggr(
-  df_before_imputation,
-  col = c('navyblue', 'red'),
-  numbers = TRUE,
-  sortVars = TRUE,
-  labels = colnames(df_before_imputation),
-  cex.axis = 0.5,
-  gap = 3,
-  ylab = c("Histogram of missing data", "Pattern")
-)
-
-
-text(
-  x = 0.25,  # Centered horizontally
-  y = .84, # Position below the plot (adjust if needed)
-  sprintf("Percentage of missing values in \nselected variables for analysis is: %.2f%%", missing_percentage), 
-  cex = 1.2,
-  pos = 1 # Aligns text below the specified coordinates
-)
-
-
-dev.off() # Close the PDF device to save the file
-
-# Start imputation
-# Define the variables to be included as covariates in each imputation model
-inlist <- c(
-  "age", "sex", "education", "comorb", "time_from_diagnosis", 
-  "family_status", "falls", "B012_01", "who5_depr"
-)
-
-# Generate predictor matrix with minimum proportion of usable cases set to 0.5
-pred <- quickpred(
-  df_before_imputation, 
-  minpuc = 0.5, 
-  include = inlist
-)
-
-# Perform multiple imputation using the MICE package
-generate_imputation <- mice(
-  data = df_before_imputation,
-  predictorMatrix = pred,
-  method = "midastouch", # Imputation method
-  m = 10,                # Number of imputed datasets
-  maxit = 5,             # Number of iterations
-  diagnostics = TRUE     # Enable diagnostics
-)
+source("imputation.R")
 
 
 # Generate and save density plot to PDF in landscape orientation
@@ -135,23 +69,7 @@ densityplot(
   ylim = c(0, 1)   # Set y-axis range for density plot
 )
 
-
 dev.off()  # Close the PDF device to save the file
-
-
-imputed_data <- complete(generate_imputation, 1)
-if (flag_check) {
-  aggr_plot <- aggr(
-    imputed_data,
-    col = c('navyblue', 'red'),
-    numbers = TRUE,
-    sortVars = TRUE,
-    labels = colnames(imputed_data),
-    cex.axis = 0.5,
-    gap = 3,
-    ylab = c("Histogram of missing data", "Pattern")
-  )
-}
 
 
 ## =================================================================================================
@@ -200,31 +118,58 @@ text_threshold <- 0.29
 cor_data <- cor_data %>%
   mutate(Label = ifelse(abs(Correlation) >= text_threshold, round(Correlation, 2), NA))
 
-var_labels_efa <- c(
-  "qol_ms_r" = "motor symptoms", 
-  "qol_nms_r" = "non-motor symptoms",
-  "qol_conditions_r" = "health care conditions", 
-  "qol_gain_r" = "secondary disease gain", 
-  "qol_loss_independence_r" = "loss of independence",
-  "qol_unpredict_r" = "unpredictability", 
-  "qol_invasive_therapy_r" = "invasive therapy",
-  "qol_other_therapy_r" = "other therapy", 
-  "qol_effect_medication_r" = "effect of PD medication", 
-  "qol_taking_medication_r" = "taking PD medication", 
-  "qol_family_contact_r" = "contact with family",
-  "qol_friends_contact_r" = "contact with friends", 
-  "qol_affectp_contact_r" = "contact with other affected people", 
-  "qol_support_yes_r" = "experience of support", 
-  "qol_stigma_r" = "stigmatisation", 
-  "qol_leisure_yes_r" = "leisure acitivities", 
-  "qol_finances_r" = "economic situation", 
-  "qol_badmob_r" ="restrictions in mobility", 
-  "qol_badadl_r" = "restrictions in ADL", 
-  "qol_sum_ident_r" = "identity overall", 
-  "qol_feeling_needed_r" = "feeling needed", 
-  "qol_thoughts_future_r" = "thoughts about the future", 
-  "qol_self_image_r" = "self-image", 
-  "qol_religion_r" = "religion"
+var_cor_efa_y <- c(
+  "qol_ms_r" = " A) motor symptoms", 
+  "qol_nms_r" = "B) non-motor symptoms",
+  "qol_conditions_r" = " C) health care conditions", 
+  "qol_gain_r" = "D) secondary disease gain", 
+  "qol_loss_independence_r" = " E) loss of independence",
+  "qol_unpredict_r" = "F) unpredictability", 
+  "qol_invasive_therapy_r" = "G) invasive therapy",
+  "qol_other_therapy_r" = "H) other therapy", 
+  "qol_effect_medication_r" = "I) effect of PD medication", 
+  "qol_taking_medication_r" = "J) taking PD medication", 
+  "qol_family_contact_r" = "K) contact with family",
+  "qol_friends_contact_r" = "L) contact with friends", 
+  "qol_affectp_contact_r" = "M) contact with other affected people", 
+  "qol_support_yes_r" = "N) experience of support", 
+  "qol_stigma_r" = "O) stigmatisation", 
+  "qol_leisure_yes_r" = "P) leisure acitivities", 
+  "qol_finances_r" = "Q) economic situation", 
+  "qol_badmob_r" ="R) restrictions in mobility", 
+  "qol_badadl_r" = "S) restrictions in ADL", 
+  "qol_sum_ident_r" = "T) identity overall", 
+  "qol_feeling_needed_r" = "U) feeling needed", 
+  "qol_thoughts_future_r" = "V) thoughts about the future", 
+  "qol_self_image_r" = "W) self-image", 
+  "qol_religion_r" = "X) religion"
+)
+
+var_cor_efa_x <- c(
+  "qol_ms_r" = " A", 
+  "qol_nms_r" = "B",
+  "qol_conditions_r" = " C", 
+  "qol_gain_r" = "D", 
+  "qol_loss_independence_r" = " E",
+  "qol_unpredict_r" = "F", 
+  "qol_invasive_therapy_r" = "G",
+  "qol_other_therapy_r" = "H", 
+  "qol_effect_medication_r" = "I", 
+  "qol_taking_medication_r" = "J", 
+  "qol_family_contact_r" = "K",
+  "qol_friends_contact_r" = "L", 
+  "qol_affectp_contact_r" = "M", 
+  "qol_support_yes_r" = "N", 
+  "qol_stigma_r" = "O", 
+  "qol_leisure_yes_r" = "P", 
+  "qol_finances_r" = "Q", 
+  "qol_badmob_r" ="R", 
+  "qol_badadl_r" = "S", 
+  "qol_sum_ident_r" = "T", 
+  "qol_feeling_needed_r" = "U", 
+  "qol_thoughts_future_r" = "V", 
+  "qol_self_image_r" = "W", 
+  "qol_religion_r" = "X"
 )
 
 pdf(file.path(getwd(), "results", "fig1.corrEFA.pdf"), width = 11, height = 8.5)
@@ -233,17 +178,20 @@ ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation)) +
   geom_tile(color = "white") +                             # Tile with white borders
   geom_text(aes(label = round(Label, 2)), size = 3) + # Add correlation values inside the squares
   scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + # Color gradient
-  scale_x_discrete(labels = var_labels_efa) + 
-  scale_y_discrete(labels = var_labels_efa) +
+  scale_x_discrete(labels = var_cor_efa_x) + 
+  scale_y_discrete(labels = var_cor_efa_y) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Rotate and size x-axis labels
+    axis.text.x = element_text(hjust = 1, size = 10),  # Rotate and size x-axis labels
     axis.text.y = element_text(size = 10),                        # Size y-axis labels
     axis.title = element_blank()                                  # Remove axis titles
   ) +
   labs(title = "Correlation Matrix (Lower Triangle, Filtered, |r| > 0.29)") +
   coord_fixed()  # Ensures tiles are square
 dev.off()
+
+# Define the output PDF for saving the plot
+pdf(file.path(getwd(), "results", "fig1.corrEFA.pdf"), width = 11, height = 8.5)
 
 
 #TODO: Not entirely happy with the way it is plotted. Would suggest trying to get only lower triangle to improve readibility. Further comment: lower triangle is plotted but the x-axis is not necessary this way. If you can get rid of it you save space.
@@ -303,12 +251,15 @@ items_to_keep <- apply(loadings_matrix, 1, function(x) any(abs(x) >= threshold))
 # 2.8: Create a new dataset with the filtered items
 filtered_data_EFA <- data_EFA[, items_to_keep]
 
+
 colnames(filtered_data_EFA) # <- TODO: you may want to change this to meaningful names so that your table in the xlsx files is correct and your heatmap and so on
+
 
 # 2.9 Perform the EFA again
 fit_oblique_filtered <- factanal(filtered_data_EFA, 4, rotation="promax", scores = "regression")
 print(fit_oblique_filtered, digits=2, cutoff=0.3, sort=TRUE)
 results.fit_oblique <- fit_oblique_filtered
+
 
 # 2.10: Export results 
 # Option 1: Create a function to build a table with the information from the EFA, source: https://stackoverflow.com/questions/63856304/create-data-frame-from-efa-output-in-r 
@@ -329,11 +280,16 @@ fa_table <- function(x, cut) {
     left_join(add_info, by = "item") %>%
     mutate(across(where(is.numeric), round, 3))
   
+  
   return(result_table)
 }
 
+proportion_variance <- fit_oblique_filtered$PVAL["Proportion Var",]
+
 # Use function "fa_table" with new EFA results and cut-off (e.g. 0.3)
 efa_table_final <- fa_table(fit_oblique_filtered, cut = 0.3)
+
+
 
 # Use package "openxlsx" to save table in Excel 
 wb3 <- createWorkbook()
@@ -381,7 +337,6 @@ identity <- imputed_data[,c("qol_sum_ident_r", "qol_thoughts_future_r", "qol_sel
 
 results.cronbach.social_life <- psych::alpha(social_life)
 results.cronbach.social_life
-# capute.output # TODO: Error???
 results.cronbach.restrictions <- psych::alpha(restrictions)
 results.cronbach.restrictions
 results.cronbach.medication <- psych::alpha(medication)
@@ -400,8 +355,8 @@ if (flag_check==TRUE) {
 
 # 2.13 Visualization of EFA
 # Heat map: Shows Magnitude of the Variable Loadings onto the Factors and shows Division into Four Factors
-pdf(file.path(getwd(), "results", "suppl_fig2b.heatmapEFA.pdf"), width = 11, height = 8.5)
-heatmap(fit_oblique_filtered$loadings,
+pdf(file.path(getwd(), "results", "fig2b.heatmapEFA.pdf"), width = 11, height = 8.5)
+heatmap.2(fit_oblique_filtered$loadings,
           cexRow = 1,        
           cexCol = 1.5,        
           srtCol = 45,         
@@ -415,7 +370,7 @@ dev.off()
 
 # 2.13.2 Show variables loading on factors (source: https://rpubs.com/pjmurphy/758265)
 
-pdf(file.path(getwd(), "results", "suppl_fig2c.overview.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "fig2c.overview.pdf"), width = 11, height = 8.5)
 loads <- fit_oblique_filtered$loadings
 # TODO: As before, you may want to give your factors more meaningful names, using something like colnames(loads)<-c("Social life", "Physical Restrictions", "Influence on identity", "PD medication")
 fa.diagram(loads)
@@ -426,24 +381,24 @@ dev.off()
 
 # Option 1: every variable has a different colored dot and there is a chart legend in a different pdf file
 # Frist, the plot
-pdf(file.path(getwd(), "results", "suppl_fig2d.pairplot.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "fig2d.pairplot.pdf"), width = 11, height = 8.5)
 
-#TODO: not working, "loadings_sub" is missing and later "variable_names"
 
 loadings <- fit_oblique_filtered$loadings
+variable_names <- rownames(fit_oblique_filtered$loadings)
 color_palette <- rainbow(nrow(loadings))
 
-pairs(loadings_sub, 
+pairs(loadings, 
       main="Pair Plot of Factor Loadings", 
       pch=19,         
       col=color_palette,  
-      labels=colnames(loadings_sub),  
+      labels=colnames(loadings),  
       cex.labels=0.8) 
 
 dev.off()
 
 # Second, the chart legend
-pdf(file.path(getwd(), "results", "suppl_fig2d.legend.pdf"), width = 3, height = 4)
+pdf(file.path(getwd(), "results", "fig2d.legend.pdf"), width = 3, height = 4)
 
 # Create an empty plot without axes and grid lines
 plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1), 
@@ -463,8 +418,71 @@ legend("center",
 
 dev.off()
 
+# Changing colors? 
+# Color families for the factors
+factor_colors <- list(
+  Factor1 = colorRampPalette(c("lightgreen", "darkgreen"))(5),  
+  Factor2 = colorRampPalette(c("lightgray", "darkgray"))(4),   
+  Factor3 = colorRampPalette(c("lightblue", "darkblue"))(4),   
+  Factor4 = colorRampPalette(c("lightcoral", "darkred"))(4)    
+)
+
+# Loadings and variables
+loadings <- fit_oblique_filtered$loadings
+variable_names <- rownames(loadings)
+
+## Initialization
+color_palette <- rep(NA, nrow(loadings))  # Placeholder for the colors
+color_counters <- list(Factor1 = 0, Factor2 = 0, Factor3 = 0, Factor4 = 0)  # Counters for colors
+
+# Iteration over the rows of loadings
+for (i in 1:nrow(loadings)) {
+  factor_index <- which.max(abs(loadings[i, ]))  # Factor with the highest loading
+  factor_name <- colnames(loadings)[factor_index]  # Name of the factor
+  
+  # Update counter and assign color
+  color_counters[[factor_name]] <- color_counters[[factor_name]] + 1
+  color_palette[i] <- factor_colors[[factor_name]][color_counters[[factor_name]]]
+}
+
+# Plot with the customized color scheme
+pdf(file.path(getwd(), "results", "fig2d.pairplot.pdf"), width = 11, height = 8.5)
+
+pairs(loadings, 
+      main = "Pair Plot of Factor Loadings", 
+      pch = 19,          
+      col = color_palette,  
+      labels = colnames(loadings),  
+      cex.labels = 1.5,  
+      font.labels = 2)   
+
+dev.off()
+
+# Create the legend
+pdf(file.path(getwd(), "results", "fig2d.legend.pdf"), width = 3, height = 4)
+
+# Initialize an empty plot
+plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1), 
+     xaxt = "n", yaxt = "n", bty = "n") 
+
+legend("center", 
+       legend = variable_names,  
+       col = color_palette,     
+       pch = 19,                 
+       title = "Variables",      
+       cex = 0.7,                
+       ncol = 1,                 
+       xpd = TRUE,               
+       bty = "o",                
+       box.lwd = 1,              
+       box.col = "black")        
+
+
+dev.off()
+
+
 # Option 2: All Variable loading on one factor have one color and names of the variables are written inside the plot
-pdf(file.path(getwd(), "results", "suppl_fig2e.pairplot.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "fig2e.pairplot.pdf"), width = 15, height = 10.5)
 fa.plot(fit_oblique_filtered, 
         labels = rownames(fit_oblique_filtered$loadings), 
         cex = 0.8, 
@@ -475,7 +493,11 @@ dev.off()
 
 ## =================================================================================================
 # Part 3: Odds Ratios: 
-# How much more likely (or less likely) is an 'extremely or very negative' rating of the impact of Parkinson's disease on quality of life (QoL) across groups defined by different demographic and health-related characteristics?
+# Old: (How much more likely (or less likely) is an 'extremely or very negative' rating of the impact of Parkinson's disease on quality of life (QoL) across groups defined by different demographic and health-related characteristics?)
+# Please don't delete the comments marked with 'old' yet.
+
+# Preamble merging dataframes and checking for multicollinearity
+imputed_data_with_scores <- bind_cols(imputed_data, factor_scores)
 
 dependent_variable = "qol_sum_disease_r"
 factorsOR1 <- c("sex_r", "comorb_r", "disturbances_sleep_APD", 
@@ -486,15 +508,18 @@ factorsOR1 <- c("sex_r", "comorb_r", "disturbances_sleep_APD",
 # Extract data of interest into new dataframe and estimate (isolated) OR to the dv ("needed_healthcare_but_did_not_receive_it_duringCovid.C4")
 df_OR1_complete <- imputed_data_with_scores %>% dplyr::select(all_of(c(dependent_variable, factorsOR1))) # create dataframe with data of interest, that is dv and regressors
 
-# Does PD has an extremely or very negative influence on overall QoL? 
-# (Yes = 1,2, No = 3 (somewhat negative), 4 (not at all), 5,6,7 = positive)
+# Old: (Does PD has an extremely or very negative influence on overall QoL?)
+# Old: ((Yes = 1,2, No = 3 (somewhat negative), 4 (not at all), 5,6,7 = positive))
+
+# How much more likely is a more positive rating of QoL (every answer except "extremly or very negative") depending on different demographic and health-related characteristics?
+# (extremely or very negative = 1,2, more positive = 3,4,5)
 
 df_OR1_complete <- df_OR1_complete %>%
   mutate(
     dv = fct_collapse(
       as.factor(qol_sum_disease_r),
-      "yes" = c("1", "2", "3"),
-      "no" = c("3", "4", "5"))) %>%
+      "negative" = c("1", "2"),
+      "positive" = c("3", "4", "5"))) %>%
   filter(!is.na(dv))
 
 
@@ -517,7 +542,7 @@ df_OR1_complete <- convert_to_integer(df_OR1_complete, var_integer)
 
 results1 = c()
 for (fac in factorsOR1) { # for loop over factors of interest
-  mod <- as.formula(sprintf("I(dv=='yes') ~ %s", fac)) # formula for (unadjusted) GLM
+  mod <- as.formula(sprintf("I(dv=='positive') ~ %s", fac)) # formula for (unadjusted) GLM
   fit_temp = glm(mod, data=df_OR1_complete, family="binomial") # estimate model
   results1 = rbind(	results1, c(exp(coef(fit_temp)[2]), 	# OR
                                 exp(confint.default(fit_temp)[2]),  	# lower CI
@@ -542,8 +567,9 @@ results_OR1
 
 
 # Visualization of (unadjusted) OR results
+# comment: haven't changed caption and title yet 
 
-fac_names <- c("Gender*", "Comorbidity**", "Sleep disturbances", 
+fac_names <- c("Gender*", "Comorbidity", "Sleep disturbances", 
                "Age", "Highes level of education", "Time since diagnosis", "Family status", 
                "Living area","Depressed mood", "Fluctuation of motor symptoms", "Falls", 
                "Factor1", "Factor2", "Factor3", "Factor4")
@@ -553,6 +579,7 @@ results_OR1$significance <- factor(results_OR1$significance, levels = c('ns', 'p
 
 
 pdf(file.path(getwd(), "results", "test.pdf"), width = 11, height = 8.5)
+fontsize = 15
 results_OR1 %>%
   dplyr::arrange(boxOdds) %>%
   mutate(factors = factor(factors, levels = factors)) %>%  # Update der Faktorenlevels
@@ -569,8 +596,8 @@ results_OR1 %>%
         legend.background = element_rect(colour = "black", fill="white"),
         legend.text = element_text(size = fontsize),
         plot.title = element_text(vjust = 4, hjust = .5, color = "black", size = fontsize, face = "bold"),
-        axis.line.x = element_line(size = .25, colour = "black"), 
-        axis.ticks.x = element_line(size = .25, colour = "black"), 
+        axis.line.x = element_line(linewidth = .25, colour = "black"), 
+        axis.ticks.x = element_line(linewidth = .25, colour = "black"), 
         axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
         axis.text = element_text(size = fontsize),
         plot.caption = element_text(hjust = 0, face="italic"), 
@@ -583,10 +610,9 @@ results_OR1 %>%
   ylab("") +
   xlab("Odds ratio (log scale)") + 
   labs(title = "PD-patients' odds of extremely or very negative impact of PD on overall QoL",
-       caption = "*Gender was coded so that OR > 1 means that being female indicates a higher risk of negative impact of PD on QoL
-       \n**Comorbidity was coded so that an OR < 1 means that patients without comorbidity have a smaller risk for extremly \nor very negativ impact of PD on QoL")
+       caption = "*Gender was coded so that OR > 1 means that being female indicates a higher risk of negative impact of PD on QoL")
 dev.off()
-
+#Reminder: adjust caption if necessary
 
 
 ## =======================================================================================================
@@ -1044,385 +1070,6 @@ brant.test(m1_simplified)
 
 # Calculating pseudo R^2 to evaluate goodness of fit
 pR2(m1_simplified)
-
-
-
-## ab hier Codeversuche, die gerade nicht relevant sind
-# =============================================================================
-
-#library("RColorBrewer")
-
-#my_blue 		<- brewer.pal(n = 9, "Blues")		# next few lines create own color_palette
-#blue_palette 	<- colorRampPalette(c(my_blue[3], my_blue[6], my_blue[9]), space = "Lab")
-#dot_color 		<- results_OR1$dot_color
-
-#m1 <- polr(qol_sum_disease_r ~ sex_r + age_r + ms_fluctuation_APD + comorb_r + living_area_r + who5_depr_r + Factor1 + Factor2 + Factor3 + Factor4 +
-#            sex_r:comorb_r + comorb_r:who5_depr_r + age_r:who5_depr_r + age_r:Factor3 + age_r:Factor2 + living_area_r:ms_fluctuation_APD + living_area_r:Factor3 +
-#           sex_r:living_area_r + comorb_r:age_r + age_r:Factor4 + who5_depr_r:Factor4 + Factor4:Factor3 +
-#          Factor1:Factor2 + Factor2:Factor4 ,
-#       data = imputed_data_with_scores, Hess = TRUE)
-
-#interaction.plot(x.factor = imputed_data_with_scores$age_r, trace.factor = imputed_data_with_scores$sex_r, response = imputed_data_with_scores$qol_sum_disease_r)
-
-
-# PCA 
-
-# Perform PCA on the factor scores
-pca_result <- prcomp(factor_scores, center = TRUE, scale. = TRUE)
-
-# Summary of the PCA results
-summary(pca_result)
-
-# Extract the PCA scores (the principal components for the observations)
-pca_scores <- pca_result$x  
-
-# Create a DataFrame with the PCA scores
-pca_scores_df <- as.data.frame(pca_scores)
-
-# Add the PCA scores to the original dataset
-imputed_data_with_pca <- cbind(imputed_data_with_scores, pca_scores_df)
-
-# Display the loadings of the principal components
-loadings_pca <- pca_result$rotation
-print(loadings_pca)
-
-
-#with pca
-
-# List of independent variables with PC
-independent_vars_interaction_pca <- c("sex_r", "comorb_r", "age_r",
-                                      "living_area_r", "who5_depr_r", "ms_fluctuation_APD", "PC1", "PC2", "PC4")
-
-# Formula for the polr model with all interactions
-formula_pca <- as.formula(paste("qol_sum_disease_r ~ (", paste(independent_vars_interaction_pca, collapse = " + "), ")^2"))
-
-# Fitting the model with polr and all interactions
-interaction_model_pca <- polr(formula_pca, data = imputed_data_with_pca, Hess = TRUE)
-
-# Summary of the model
-summary(interaction_model_pca)
-
-
-var_reg_pca <- c("qol_sum_disease_r", "sex_r", "comorb_r", "disturbances_sleep_APD", 
-                 "age_r", "education_r_r", "time_from_diagnosis_r", "family_status_r_r", 
-                 "living_area_r", "who5_depr_r", "ms_fluctuation_APD", "falls_r")
-
-for (variable in var_reg_pca) {
-  imputed_data_with_pca[[variable]] <- as.factor(imputed_data_with_pca[[variable]])
-}
-
-m2 <- polr(qol_sum_disease_r ~ sex_r + age_r + ms_fluctuation_APD + comorb_r + living_area_r + who5_depr_r + PC1 + PC2 + PC3 + PC4
-           + age_r:ms_fluctuation_APD + age_r:PC2 + living_area_r:PC2 + PC2:PC3 + PC2:PC4 + who5_depr_r:PC2 + living_area_r:PC1 + sex_r:comorb_r,
-           data = imputed_data_with_pca, Hess = TRUE, 
-)
-
-#MASS::stepAIC(m1, direction = "both") #vielleicht später?
-# =================================================================================================================
-## Rigide Regression #Entwurf, hier weiß ich noch nicht was mit das bringt
-
-# Paket installieren, falls nicht vorhanden
-if (!require(ordinalNet)) install.packages("ordinalNet")
-library(ordinalNet)
-
-# Deine Prädiktoren und Zielvariable definieren
-x <- model.matrix(~ sex_r + comorb_r + age_r+ living_area_r + time_from_diagnosis_r + Factor1 + Factor2 + Factor3 + ms_fluctuation_APD + who5_depr_r + Factor4, 
-                  data = imputed_data_with_scores)[,-1]  # Modellmatrix ohne den Interzept
-
-y <- imputed_data_with_scores$qol_sum_disease_r  # Zielvariable
-
-# Ridge-Regularisierte ordinale logistische Regression
-fit <- ordinalNet(x, y, family = "cumulative", link = "logit", alpha = 0, lambdaVals = 0.1)
-
-# Ausgabe der Ergebnisse
-summary(fit)
-
-# Ridge-Regression Koeffizienten anzeigen
-coefficients <- coef(fit)
-
-# Ausgabe der Koeffizienten
-print(coefficients)
-
-
-# =================================================================================================================
-## Ordinal logistic regression with vglm
-imputed_data_og$qol_sum_disease_r <- ordered(imputed_data_og$qol_sum_disease_r)
-m1vglm <- vglm(qol_sum_disease_r ~ time_from_diagnosis_r + who5_depr_r + education_r_r + ms_fluctuation_APD, data = imputed_data_og, family = cumulative(link = "logitlink", parallel = TRUE, reverse = TRUE))
-summary(m1vglm)
-
-# Testing proportional odds assumption 
-gofcat::brant.test(m1vglm)
-
-# Calculation Pseudo R^2 (source: https://stackoverflow.com/questions/19014122/pseudo-r2-using-vglm)
-# Fit null model (intercept only)
-null <- vglm(qol_sum_disease_r ~ 1, data = imputed_data_og, family = cumulative(link = "logitlink", parallel = TRUE, reverse = TRUE))
-
-# McFadden's pseudo-R^2
-print(pseudo_R2 <- 1 - deviance(m1vglm) / deviance(null))
-
-
-## ================================================================================
-# might be deleted soon
-# GLM
-
-## Creating first draft of GLM and checking for linear relationship between the predictors and the transformed expectation of the response variable
-# model 
-model1 <- glm(qol_sum_disease_r ~ sex_r + comorb_r + age_r + living_area_r + ms_fluctuation_APD + who5_depr_r + Factor1 + Factor2 + Factor3 + Factor4, family = gaussian(link = "identity"), data = imputed_data_with_scores)
-summary(model1)
-
-#partial residual plot
-crPlots(model1)
-
-# problems: 1) dependent variable is ordinal, not continuous; 2) not always linear relationship between the predictors and the transformed expectation of the response variable
-## =================================================================================================
-# Bootstrapping to explore the robustness of the EFA
-
-df_before_imputation_bootstrap <- df_recoded %>% dplyr::select(age_r, sex_r, living_area_r, education_r_r, financial_stability_r, family_status_r_r, living_situation_r_r,
-                                                            age_at_diagnosis_r, time_from_diagnosis_r, who5_depr_r, comorb_r, disturbances_sleep_APD, falls_r, assist_mov_r, ms_fluctuation_APD,
-                                                            qol_sum_disease_r, qol_ms_r, qol_nms_r, qol_conditions_r, 
-                                                            qol_gain_r, qol_loss_independence_r, qol_unpredict_r, qol_invasive_therapy_r, 
-                                                            qol_other_therapy_r, qol_effect_medication_r, qol_taking_medication_r, 
-                                                            qol_family_contact_r, qol_friends_contact_r, qol_affectp_contact_r, qol_support_yes_r, 
-                                                            qol_stigma_r, qol_leisure_yes_r, qol_finances_r, qol_badmob_r, 
-                                                            qol_badadl_r, qol_sum_ident_r, qol_feeling_needed_r, qol_thoughts_future_r, qol_self_image_r,
-                                                            qol_religion_r)
-
-# Number of Bootstrap samples
-n_bootstrap <- 1000
-
-# Create a list to store the imputation results for each Bootstrap sample
-# bootstrap_imputations <- list() # a single run takes 15 hours!
-
-# Bootstrap loop: For each Bootstrap sample
-for (i in 1_n_bootstrap) {
-  
-  # Draw a Bootstrap sample with replacement
-  bootstrap_sample_bootstrap <- df_before_imputation_bootstrap[sample(1:nrow(df_before_imputation_bootstrap), 
-                                                                      size = nrow(df_before_imputation_bootstrap), 
-                                                                      replace = TRUE), ]
-  
-  # Imputation for the Bootstrap sample
-  pred_bootstrap <- quickpred(bootstrap_sample_bootstrap, minpuc = 0.5, include = inlist) # predictor matrix
-  generate_imputation_bootstrap <- mice(data = bootstrap_sample_bootstrap,
-                                        predictorMatrix = pred_bootstrap, 
-                                        method = c("midastouch"),
-                                        m = 10,
-                                        maxit = 5,            
-                                        diagnostics = TRUE)		
-  
-  # Store the imputed data for the current Bootstrap sample
-  imputed_data_bootstrap <- complete(generate_imputation_bootstrap, 1)
-  
-  # Add the imputed data to the list
-  bootstrap_imputations[[i]] <- imputed_data_bootstrap
-}
-
-# Sanity checks, e.g., for the first Bootstrap-imputed dataset
-flag_check_bootstrap <- TRUE
-if (flag_check_bootstrap){ 
-  aggr_plot_bootstrap <- aggr(bootstrap_imputations[[1]], col = c('navyblue','red'), numbers = TRUE, sortVars = TRUE, 
-                              labels = colnames(bootstrap_imputations[[1]]), cex.axis = .5, gap = 3, 
-                              ylab = c("Histogram of missing data","Pattern"))
-}
-
-## =============================================================================================
-# EFA with bootstrapping and imputation
-
-# Number of bootstrap datasets (e.g., 1000 in your case)
-n_bootstrap <- length(bootstrap_imputations)  # If you have 1000 datasets, length should be 1000
-
-# Create a list to store the EFA results for each dataset
-efa_results_bootstrap <- list()
-
-# Loop through each of the imputed datasets
-for (i in 1_n_bootstrap) {
-  # Get the imputed dataset
-  imputed_data_bootstrap <- bootstrap_imputations[[i]]
-  
-  # Select data for EFA
-  df_EFA_bootstrap <- imputed_data_bootstrap %>% dplyr::select(qol_sum_disease_r, qol_ms_r, qol_nms_r, qol_conditions_r, 
-                                                                         qol_gain_r, qol_loss_independence_r, qol_unpredict_r, qol_invasive_therapy_r, 
-                                                                         qol_other_therapy_r, qol_effect_medication_r, qol_taking_medication_r, 
-                                                                         qol_family_contact_r, qol_friends_contact_r, qol_affectp_contact_r, qol_support_yes_r, 
-                                                                         qol_stigma_r, qol_leisure_yes_r, qol_finances_r, qol_badmob_r, 
-                                                                         qol_badadl_r, qol_sum_ident_r, qol_feeling_needed_r, qol_thoughts_future_r, qol_self_image_r,
-                                                                         qol_religion_r)
-  
-  # Correlation matrix
-  cor_matrix_bootstrap <- round(cor(df_EFA_bootstrap), 2)
-  
-  # Filter correlation matrix (values > 0.29)
-  cor_matrix_filtered_bootstrap <- ifelse(abs(cor_matrix_bootstrap) > 0.29, cor_matrix_bootstrap, NA)
-  
-  # Exclude variables with no correlation > 0.29
-  mask_bootstrap <- abs(cor_matrix_bootstrap) > 0.29
-  diag(mask_bootstrap) <- FALSE
-  exclude_vars_bootstrap <- colnames(df_EFA_bootstrap)[colSums(mask_bootstrap) == 0]
-  
-  # Remove those variables from the dataset
-  data_EFA_bootstrap <- df_EFA_bootstrap[, !(colnames(df_EFA_bootstrap) %in% exclude_vars_bootstrap)]
-  
-  # Perform Kaiser-Meyer-Olkin (KMO) test and filter variables
-  KMO_result_bootstrap <- KMO(data_EFA_bootstrap)
-  data_EFA_bootstrap <- data_EFA_bootstrap[, KMO_result_bootstrap$MSAi > 0.50] # Remove variables with MSA < 0.50
-  
-  # Bartlett's test for sphericity
-  bartlett_test_bootstrap <- cortest.bartlett(data_EFA_bootstrap)
-  
-  # Determine number of factors to extract (based on eigenvalues)
-  eigenvalues_bootstrap <- eigen(cor(data_EFA_bootstrap))$values
-  scree_plot_bootstrap <- scree(data_EFA_bootstrap, pc = FALSE)
-  
-  # Extract factors (using a fixed number of factors, e.g., 4 in this case)
-  efa_result_bootstrap <- factanal(data_EFA_bootstrap, factors = 3, rotation = "promax")
-  
-  # Save the EFA result for this dataset
-  efa_results_bootstrap[[i]] <- efa_result_bootstrap
-  
-  # Print the results for this iteration
-  print(efa_result_bootstrap, digits = 2, cutoff = 0.3, sort = TRUE)
-  
-  # Threshold for factor loadings
-  threshold_bootstrap <- 0.4
-  
-  # Filter items based on factor loadings (e.g., loadings >= 0.4)
-  loadings_matrix_bootstrap <- efa_result_bootstrap$loadings
-  items_to_keep_bootstrap <- apply(loadings_matrix_bootstrap, 1, function(x) any(abs(x) >= threshold_bootstrap))
-  
-  # Create a new dataset with the filtered items for the next step (if needed)
-  filtered_data_EFA_bootstrap <- data_EFA_bootstrap[, items_to_keep_bootstrap]
-  
-  # Re-run the EFA on the filtered data
-  efa_result_filtered_bootstrap <- factanal(filtered_data_EFA_bootstrap, 3, rotation = "promax")
-  print(efa_result_filtered_bootstrap, digits = 2, cutoff = 0.3, sort = TRUE)
-}
-
-
-## ========== 
-## Robust EFA with variables that are in 95% part of the EFA after bootstrapping and imputation 
-
-# Initialize a list for the factor loadings
-all_loadings_bootstrap <- list()
-
-# Loop through the bootstrapping imputations
-for (i in 1_n_bootstrap) {
-  # Get the imputed data
-  imputed_data_bootstrap <- bootstrap_imputations[[i]]
-  
-  # Select the data for EFA
-  df_EFA_bootstrap <- imputed_data_bootstrap %>% dplyr::select(qol_sum_disease_r, qol_ms_r, qol_nms_r, qol_conditions_r, 
-                                                                         qol_gain_r, qol_loss_independence_r, qol_unpredict_r, qol_invasive_therapy_r, 
-                                                                         qol_other_therapy_r, qol_effect_medication_r, qol_taking_medication_r, 
-                                                                         qol_family_contact_r, qol_friends_contact_r, qol_affectp_contact_r, qol_support_yes_r, 
-                                                                         qol_stigma_r, qol_leisure_yes_r, qol_finances_r, qol_badmob_r, 
-                                                                         qol_badadl_r, qol_sum_ident_r, qol_feeling_needed_r, qol_thoughts_future_r, qol_self_image_r,
-                                                                         qol_religion_r)
-  
-  # Correlation matrix and perform EFA
-  cor_matrix_bootstrap <- cor(df_EFA_bootstrap, use = "complete.obs")  # Use complete cases only
-  efa_result_bootstrap <- factanal(df_EFA_bootstrap, factors = 4, rotation = "promax", na.action = na.omit)
-  
-  # Store the factor loadings in the list
-  all_loadings_bootstrap[[i]] <- efa_result_bootstrap$loadings
-}
-
-# Create a DataFrame for counting the number of times each variable has loaded
-loading_count_bootstrap <- data.frame(variable = rownames(all_loadings_bootstrap[[1]]), count = 0)
-
-# Count the loadings
-for (i in 1_n_bootstrap) {
-  current_loadings_bootstrap <- all_loadings_bootstrap[[i]]
-  loaded_vars_bootstrap <- rownames(current_loadings_bootstrap)[rowSums(abs(current_loadings_bootstrap) >= 0.4) > 0]  # Loadings >= 0.4
-  
-  # Increase the count for each loaded variable
-  loading_count_bootstrap$count[loading_count_bootstrap$variable %in% loaded_vars_bootstrap] <- loading_count_bootstrap$count[loading_count_bootstrap$variable %in% loaded_vars_bootstrap] + 1
-}
-
-# Filter the variables that loaded in 95% of the analyses
-threshold_bootstrap <- 0.95 * n_bootstrap
-robust_variables_bootstrap <- loading_count_bootstrap$variable[loading_count_bootstrap$count >= threshold_bootstrap]
-
-# Check the robust variables
-print(robust_variables_bootstrap)
-
-# Perform the EFA with the robust variables
-data_robust_bootstrap <- df_EFA_bootstrap[, colnames(df_EFA_bootstrap) %in% robust_variables_bootstrap]
-
-# Kaiser-Meyer-Olkin factor adequacy 
-KMO(data_robust_bootstrap)
-data_robust_bootstrap <- data_robust_bootstrap[, KMO(data_robust_bootstrap)$MSAi > 0.50] # Get rid of all variables with MSA < 0.50
-
-# Bartlett’s test for sphericity
-cortest.bartlett(data_robust_bootstrap)
-
-# Determine number of factors to extract
-eigen(cor(data_robust_bootstrap))
-scree(data_robust_bootstrap, pc = FALSE) 
-
-final_efa_result_bootstrap <- factanal(data_robust_bootstrap, factors = 3, rotation = "promax")
-print(final_efa_result_bootstrap, digits = 2, cutoff = 0.3, sort = TRUE)username <- Sys.info()["login"]
-
-# 2.7: Export results (even if factor loading is <0.4)  
-# Option 1: save results of EFA with capture.output as text and format in Excel
-fit_oblique_output <- capture.output(print(fit_oblique, digits = 2, cutoff = 0.3, sort = TRUE))
-write.csv(fit_oblique_output, file = file.path(getwd(), "results", "factor_loadings.csv"), row.names = TRUE)
-
-
-# Option 2: Create a function to build a table with the information from the EFA, source: https://stackoverflow.com/questions/63856304/create-data-frame-from-efa-output-in-r 
-# Step 1: Export Factor Loadings and Uniquenesses
-fa_table <- function(x, cut) {
-  loadings <- unclass(x$loadings) %>% as.data.frame() %>% round(2)
-  loadings[abs(loadings) < cut] <- ""
-  add_info <- cbind(
-    commonality = x$communalities,
-    uniqueness = x$uniquenesses,
-    complexity = x$complexity
-  ) %>% 
-    as.data.frame() %>%
-    rownames_to_column("item")
-  
-  result_table <- loadings %>%
-    rownames_to_column("item") %>%
-    left_join(add_info, by = "item") %>%
-    mutate(across(where(is.numeric), round, 3))
-  
-  return(result_table)
-}
-
-
-# Use function with EFA results and cut-off (e.g. 0.3)
-efa_table <- fa_table(fit_oblique, cut = 0.3)
-
-# Use package "openxlsx" to save table in Excel 
-wb <- createWorkbook()
-addWorksheet(wb, "efa_results")
-writeData(wb, "efa_results", efa_table)
-setColWidths(wb, "efa_results", cols = 1:ncol(efa_table), widths = "auto")
-saveWorkbook(wb, file = file.path(getwd(), "results", "efa_table.xlsx"), overwrite = TRUE)
-
-# Step 2: Export Factor Correlations
-extract_factor_correlations <- function(x) {
-  if (!is.null(x$correlation)) {
-    n_factors <- ncol(x$loadings)
-    factor_correlation <- as.data.frame(round(x$correlation[1:n_factors, 1:n_factors], 3))
-    rownames(factor_correlation) <- colnames(factor_correlation) <- paste0("Factor", 1:n_factors)
-    return(factor_correlation)
-  } else {
-    message("Keine Faktorenkorrelationen vorhanden.")
-    return(NULL)
-  }
-}
-# Use function with EFA results
-factor_correlations <- extract_factor_correlations(fit_oblique)
-
-# Create correlation matrix with row names
-factor_correlation_with_rowname <- cbind(Factor = rownames(factor_correlations), factor_correlations)
-
-# Use package "openxlsx" to save table in Excel 
-wb2 <- createWorkbook()
-addWorksheet(wb2, "efa_factor_correlations")
-writeData(wb2, "efa_factor_correlations", factor_correlation_with_rowname)
-setColWidths(wb2, "efa_factor_correlations", cols = 1:ncol(factor_correlation_with_rowname), widths = "auto")
-saveWorkbook(wb2, file = file.path(getwd(), "results", "efa_factor_correlations.xlsx"), overwrite = TRUE)
 
 
 
