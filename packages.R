@@ -1,36 +1,43 @@
+# Define a list of required packages for this project
+
 packages <- c(
-  "tidyverse", 
-  "dplyr", 
-  "descr", 
-  "sjmisc", 
-  "sjlabelled", 
-  "sjPlot", 
-  "sjstats", 
-  "easystats", 
-  "ggpubr", 
-  "psych",
-  "tableone", 
-  "mice", 
-  "VIM",
-  "car",
-  "MASS",
   "brant",
+  "car",
+  "descr",
+  "dplyr",
+  "easystats",
+  "ggpubr",
   "gofcat",
-  "pscl",
-  "ordinal",
-  "openxlsx",
   "gplots",
-  "lemon"
+  "lemon",
+  "MASS",
+  "mice",
+  "openxlsx",
+  "ordinal",
+  "pscl",
+  "psych",
+  "RColorBrewer",
+  "sjlabelled",
+  "sjmisc",
+  "sjPlot",
+  "sjstats",
+  "tableone",
+  "tidyverse",
+  "VIM"
 )
 
-## Now load or install & load all if necessary
+# Check if the required packages are installed
+# If not installed, install them and then load the library
 package.check <- lapply(
   packages,
   FUN = function(x) {
+    # Check if the package is installed
     if (!require(x, character.only = TRUE)) {
+      # Install the package with dependencies
       install.packages(x, dependencies = TRUE)
+      
+      # Load the package after installation
       library(x, character.only = TRUE)
     }
   }
 )
-

@@ -2,6 +2,7 @@
 # Parkinson's disease; 
 # Code developed by Leonie Moormann and David Pedrosa
 
+# Version 2.4 # 2024-24-11  # Minor changes on plots and comments on scripts 
 # Version 2.3 # 2024-19-11, # Smaller adjustments in code for biplot (EFA) and in code for x-axis (correlation matrix EFA), smaller adjustments in OR
 # Version 2.2 # 2024-12-11, # OR with binomial GLM, visualization of OR
 # Version 2.1 # 2024-11-11, # Smaller adjustments in TableOne, visualization of health-care conditions, PartD and E
@@ -118,32 +119,60 @@ text_threshold <- 0.29
 cor_data <- cor_data %>%
   mutate(Label = ifelse(abs(Correlation) >= text_threshold, round(Correlation, 2), NA))
 
+#var_cor_efa_y <- c(
+#  "qol_ms_r" = " A) motor symptoms", 
+#  "qol_nms_r" = "B) non-motor symptoms",
+#  "qol_conditions_r" = " C) health care conditions", 
+#  "qol_gain_r" = "D) secondary disease gain", 
+#  "qol_loss_independence_r" = " E) loss of independence",
+#  "qol_unpredict_r" = "F) unpredictability", 
+#  "qol_invasive_therapy_r" = "G) invasive therapy",
+#  "qol_other_therapy_r" = "H) other therapy", 
+#  "qol_effect_medication_r" = "I) effect of PD medication", 
+#  "qol_taking_medication_r" = "J) taking PD medication", 
+#  "qol_family_contact_r" = "K) contact with family",
+#  "qol_friends_contact_r" = "L) contact with friends", 
+#  "qol_affectp_contact_r" = "M) contact with other affected people", 
+#  "qol_support_yes_r" = "N) experience of support", 
+#  "qol_stigma_r" = "O) stigmatisation", 
+#  "qol_leisure_yes_r" = "P) leisure acitivities", 
+#  "qol_finances_r" = "Q) economic situation", 
+#  "qol_badmob_r" ="R) restrictions in mobility", 
+#  "qol_badadl_r" = "S) restrictions in ADL", 
+#  "qol_sum_ident_r" = "T) identity overall", 
+#  "qol_feeling_needed_r" = "U) feeling needed", 
+#  "qol_thoughts_future_r" = "V) thoughts about the future", 
+#  "qol_self_image_r" = "W) self-image", 
+#  "qol_religion_r" = "X) religion"
+#)
+
 var_cor_efa_y <- c(
-  "qol_ms_r" = " A) motor symptoms", 
-  "qol_nms_r" = "B) non-motor symptoms",
-  "qol_conditions_r" = " C) health care conditions", 
-  "qol_gain_r" = "D) secondary disease gain", 
-  "qol_loss_independence_r" = " E) loss of independence",
-  "qol_unpredict_r" = "F) unpredictability", 
-  "qol_invasive_therapy_r" = "G) invasive therapy",
-  "qol_other_therapy_r" = "H) other therapy", 
-  "qol_effect_medication_r" = "I) effect of PD medication", 
-  "qol_taking_medication_r" = "J) taking PD medication", 
-  "qol_family_contact_r" = "K) contact with family",
-  "qol_friends_contact_r" = "L) contact with friends", 
-  "qol_affectp_contact_r" = "M) contact with other affected people", 
-  "qol_support_yes_r" = "N) experience of support", 
-  "qol_stigma_r" = "O) stigmatisation", 
-  "qol_leisure_yes_r" = "P) leisure acitivities", 
-  "qol_finances_r" = "Q) economic situation", 
-  "qol_badmob_r" ="R) restrictions in mobility", 
-  "qol_badadl_r" = "S) restrictions in ADL", 
-  "qol_sum_ident_r" = "T) identity overall", 
-  "qol_feeling_needed_r" = "U) feeling needed", 
-  "qol_thoughts_future_r" = "V) thoughts about the future", 
-  "qol_self_image_r" = "W) self-image", 
-  "qol_religion_r" = "X) religion"
+  "qol_ms_r" = "motor symptoms (A)", 
+  "qol_nms_r" = "non-motor symptoms (B)",
+  "qol_conditions_r" = "health care conditions (C)", 
+  "qol_gain_r" = "secondary disease gain (D)", 
+  "qol_loss_independence_r" = "loss of independence (E)",
+  "qol_unpredict_r" = "unpredictability (F)", 
+  "qol_invasive_therapy_r" = "invasive therapy (G)",
+  "qol_other_therapy_r" = "other therapy (H)", 
+  "qol_effect_medication_r" = "effect of PD medication (I)", 
+  "qol_taking_medication_r" = "taking PD medication (J)", 
+  "qol_family_contact_r" = "contact with family (K)",
+  "qol_friends_contact_r" = "contact with friends (L)", 
+  "qol_affectp_contact_r" = "contact with other affected people (M)", 
+  "qol_support_yes_r" = "experience of support (N)", 
+  "qol_stigma_r" = "stigmatisation (O)", 
+  "qol_leisure_yes_r" = "leisure activities (P)", 
+  "qol_finances_r" = "economic situation (Q)", 
+  "qol_badmob_r" = "restrictions in mobility (R)", 
+  "qol_badadl_r" = "restrictions in ADL (S)", 
+  "qol_sum_ident_r" = "identity overall (T)", 
+  "qol_feeling_needed_r" = "feeling needed (U)", 
+  "qol_thoughts_future_r" = "thoughts about the future (V)", 
+  "qol_self_image_r" = "self-image (W)", 
+  "qol_religion_r" = "religion (X)"
 )
+
 
 var_cor_efa_x <- c(
   "qol_ms_r" = " A", 
@@ -172,29 +201,39 @@ var_cor_efa_x <- c(
   "qol_religion_r" = "X"
 )
 
+cor_data$Correlation_cat <- cut(
+  cor_data$Correlation, 
+  breaks = c(0, 0.25, 0.5, 0.75, 1), 
+  labels = c("< .25", ".25 to .50", ".50 to .75", ">.75"),
+  include.lowest = TRUE  # Include 0 in the first interval
+)
+
 pdf(file.path(getwd(), "results", "fig1.corrEFA.pdf"), width = 11, height = 8.5)
 # Plot the correlation matrix with ggplot2
-ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation)) +
-  geom_tile(color = "white") +                             # Tile with white borders
-  geom_text(aes(label = round(Label, 2)), size = 3) + # Add correlation values inside the squares
-  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) + # Color gradient
+ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation_cat)) +
+  geom_tile(color = "white") +                              # Tile with white borders
+  geom_text(aes(label = round(Label, 2)), size = 3) +       # Add correlation values inside the squares
+  scale_fill_brewer(
+    palette = "YlOrBr",                                     # Use Brewer palette YlOrBr
+    name = "Correlation"                                    # Legend title
+  ) +
   scale_x_discrete(labels = var_cor_efa_x) + 
   scale_y_discrete(labels = var_cor_efa_y) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(hjust = 1, size = 10),  # Rotate and size x-axis labels
-    axis.text.y = element_text(size = 10),                        # Size y-axis labels
-    axis.title = element_blank()                                  # Remove axis titles
+    axis.text.x = element_text(hjust = 1, size = 10),       # Rotate and size x-axis labels
+    axis.text.y = element_text(hjust = 0, size = 10),       # Left-align y-axis labels and size them
+    axis.title = element_blank(),                           # Remove axis titles
+    plot.caption = element_text(hjust = 0, size = 8, face = "italic") # Style the footnote
   ) +
-  labs(title = "Correlation Matrix (Lower Triangle, Filtered, |r| > 0.29)") +
+  labs(title = "Correlation Matrix (Lower Triangle, Filtered, |r| > 0.29)", 
+  	caption = "Values below .29 were omitted due to ...") +
   coord_fixed()  # Ensures tiles are square
 dev.off()
 
 # Define the output PDF for saving the plot
 pdf(file.path(getwd(), "results", "fig1.corrEFA.pdf"), width = 11, height = 8.5)
 
-
-#TODO: Not entirely happy with the way it is plotted. Would suggest trying to get only lower triangle to improve readibility. Further comment: lower triangle is plotted but the x-axis is not necessary this way. If you can get rid of it you save space.
 
 # 2.2: Exclude variables that don't have any correlations > 0.29
 cor_matrix <- cor(df_EFA, use = "complete.obs")
@@ -383,6 +422,7 @@ dev.off()
 # Frist, the plot
 pdf(file.path(getwd(), "results", "fig2d.pairplot.pdf"), width = 11, height = 8.5)
 
+#TODO: think this sould be suppl. material
 
 loadings <- fit_oblique_filtered$loadings
 variable_names <- rownames(fit_oblique_filtered$loadings)
@@ -489,7 +529,7 @@ fa.plot(fit_oblique_filtered,
         main = "Pair Plot of Factor Analysis")
 dev.off()
 
-# TODO: This one is a bit hard to digest! But you just need 1 of them, pick one and don't put it in the supplementary files, this is the second result (1. TableOne, 2. EFA)
+# TODO: Would go with option 2 but in the supplement! 
 
 ## =================================================================================================
 # Part 3: Odds Ratios: 
@@ -614,6 +654,7 @@ results_OR1 %>%
 dev.off()
 #Reminder: adjust caption if necessary
 
+# TODO: these results look so incredibly cool and they fiut with what you yould expect !!! : D
 
 ## =======================================================================================================
 ## Part 4: Visualization Health care Conditions, Part D and E of the questionnaire
