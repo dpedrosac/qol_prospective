@@ -2,7 +2,8 @@
 # Parkinson's disease; 
 # Code developed by Leonie Moormann and David Pedrosa
 
-# Version 2.4 # 2024-24-11  # Minor changes on plots and comments on scripts 
+# Version 2.5 # 2024-25-11, # Minor changes on plots
+# Version 2.4 # 2024-24-11, # Minor changes on plots and comments on scripts 
 # Version 2.3 # 2024-19-11, # Smaller adjustments in code for biplot (EFA) and in code for x-axis (correlation matrix EFA), smaller adjustments in OR
 # Version 2.2 # 2024-12-11, # OR with binomial GLM, visualization of OR
 # Version 2.1 # 2024-11-11, # Smaller adjustments in TableOne, visualization of health-care conditions, PartD and E
@@ -53,8 +54,6 @@ view_df(df_recoded)
 ## Part 1: Create TableOne for participants
 source("CreateTableOne.R")
 
-table(df_raw$comorb)
-table(df_recoded$comorb_r)
 
 ## =================================================================================================
 # Preamble further analysis: Data imputation using the MICE package with a multivariate approach
@@ -107,6 +106,49 @@ cor_matrix[abs(cor_matrix) > .99] <- .01
 results.cor_matrix <- cor_matrix
 
 # 2.1.1: Visualize correlation matrix
+
+# 2.1.1.1: Correlation plot
+
+# Convert the correlation matrix into a long-format data frame
+cor_long <- as.data.frame(as.table(cor_matrix)) %>% 
+  filter(!is.na(Freq)) %>%         # Keep only non-NA values
+  rename(pair1 = Var1,            # Rename columns for clarity
+         pair2 = Var2,
+         correlation = Freq) %>%
+  filter(pair1 != pair2) %>%      # Remove self-correlations (diagonal entries)
+  rowwise() %>%                   # Apply operations row by row
+  mutate(pair_sorted = paste(sort(c(pair1, pair2)), collapse = " + ")) %>%  # Sort variable pairs alphabetically
+  ungroup() %>%                   # Return to non-rowwise operations
+  distinct(pair_sorted, .keep_all = TRUE) %>%  # Remove duplicates based on sorted pairs
+  arrange(desc(correlation))                  # Sort by correlation in descending order
+
+# Set a threshold for filtering correlations
+text_threshold <- 0.29
+cor_long <- cor_long %>%
+  mutate(Label = ifelse(abs(correlation) >= text_threshold, round(correlation, 2), NA)) %>% 
+  filter(abs(correlation) >= text_threshold)  # Retain only correlations above the threshold
+
+# Define plot colors
+point_color <- "blue4"
+
+# Generate the plot and save it as a PDF
+pdf(file.path(getwd(), "results", "fig1a.corrEFA.pdf"), width = 11, height = 8.5)
+ggplot(cor_long, aes(x = correlation, y = reorder(pair_sorted, correlation))) + 
+  geom_point(color = point_color, size = 3) +  # Plot points for correlations
+  geom_segment(aes(xend = 0, yend = pair_sorted), color = point_color, size = 0.8) +  # Add connecting lines
+  geom_text(aes(label = Label), hjust = -0.2, size = 3, na.rm = TRUE) +  # Add labels for correlations >= 0.29
+  theme_minimal() +                 # Use a minimal theme for the plot
+  labs(x = "Correlation", y = NULL, title = "Correlation Plot, Filtered, |r| > 0.29") +  # Set axis labels and title
+  theme(
+    axis.text.y = element_text(size = 8),  # Adjust text size on the y-axis
+    panel.grid.major.y = element_blank()   # Remove horizontal grid lines
+  )
+dev.off()                                # Close the PDF output device
+
+
+
+# 2.1.1.2 Correlation matrix
+
 # Retain only the lower triangle
 cor_matrix[upper.tri(cor_matrix)] <- NA  # Mask the upper triangle
 
@@ -119,32 +161,6 @@ text_threshold <- 0.29
 cor_data <- cor_data %>%
   mutate(Label = ifelse(abs(Correlation) >= text_threshold, round(Correlation, 2), NA))
 
-#var_cor_efa_y <- c(
-#  "qol_ms_r" = " A) motor symptoms", 
-#  "qol_nms_r" = "B) non-motor symptoms",
-#  "qol_conditions_r" = " C) health care conditions", 
-#  "qol_gain_r" = "D) secondary disease gain", 
-#  "qol_loss_independence_r" = " E) loss of independence",
-#  "qol_unpredict_r" = "F) unpredictability", 
-#  "qol_invasive_therapy_r" = "G) invasive therapy",
-#  "qol_other_therapy_r" = "H) other therapy", 
-#  "qol_effect_medication_r" = "I) effect of PD medication", 
-#  "qol_taking_medication_r" = "J) taking PD medication", 
-#  "qol_family_contact_r" = "K) contact with family",
-#  "qol_friends_contact_r" = "L) contact with friends", 
-#  "qol_affectp_contact_r" = "M) contact with other affected people", 
-#  "qol_support_yes_r" = "N) experience of support", 
-#  "qol_stigma_r" = "O) stigmatisation", 
-#  "qol_leisure_yes_r" = "P) leisure acitivities", 
-#  "qol_finances_r" = "Q) economic situation", 
-#  "qol_badmob_r" ="R) restrictions in mobility", 
-#  "qol_badadl_r" = "S) restrictions in ADL", 
-#  "qol_sum_ident_r" = "T) identity overall", 
-#  "qol_feeling_needed_r" = "U) feeling needed", 
-#  "qol_thoughts_future_r" = "V) thoughts about the future", 
-#  "qol_self_image_r" = "W) self-image", 
-#  "qol_religion_r" = "X) religion"
-#)
 
 var_cor_efa_y <- c(
   "qol_ms_r" = "motor symptoms (A)", 
@@ -208,7 +224,7 @@ cor_data$Correlation_cat <- cut(
   include.lowest = TRUE  # Include 0 in the first interval
 )
 
-pdf(file.path(getwd(), "results", "fig1.corrEFA.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "fig1b.corrEFA.pdf"), width = 11, height = 8.5)
 # Plot the correlation matrix with ggplot2
 ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation_cat)) +
   geom_tile(color = "white") +                              # Tile with white borders
@@ -227,12 +243,10 @@ ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation_cat)) +
     plot.caption = element_text(hjust = 0, size = 8, face = "italic") # Style the footnote
   ) +
   labs(title = "Correlation Matrix (Lower Triangle, Filtered, |r| > 0.29)", 
-  	caption = "Values below .29 were omitted due to ...") +
+  	caption = "Values below .29 were omitted due to the lack of a sufficient relationship with each other, which interferes with achieving the most robust factor structure possible.") +
   coord_fixed()  # Ensures tiles are square
 dev.off()
 
-# Define the output PDF for saving the plot
-pdf(file.path(getwd(), "results", "fig1.corrEFA.pdf"), width = 11, height = 8.5)
 
 
 # 2.2: Exclude variables that don't have any correlations > 0.29
@@ -416,125 +430,20 @@ fa.diagram(loads)
 dev.off()
 
 
-# 2.13.3 Biplot: Create a pair plot matrix (all possible combinations of the factors are plotted against each other)
-
-# Option 1: every variable has a different colored dot and there is a chart legend in a different pdf file
-# Frist, the plot
-pdf(file.path(getwd(), "results", "fig2d.pairplot.pdf"), width = 11, height = 8.5)
-
-#TODO: think this sould be suppl. material
-
-loadings <- fit_oblique_filtered$loadings
-variable_names <- rownames(fit_oblique_filtered$loadings)
-color_palette <- rainbow(nrow(loadings))
-
-pairs(loadings, 
-      main="Pair Plot of Factor Loadings", 
-      pch=19,         
-      col=color_palette,  
-      labels=colnames(loadings),  
-      cex.labels=0.8) 
-
-dev.off()
-
-# Second, the chart legend
-pdf(file.path(getwd(), "results", "fig2d.legend.pdf"), width = 3, height = 4)
-
-# Create an empty plot without axes and grid lines
-plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1), 
-     xaxt = "n", yaxt = "n", bty = "n") 
-
-legend("center", 
-       legend = variable_names,  
-       col = color_palette,      
-       pch = 19,                 
-       title = "Variables",      
-       cex = 0.7,                
-       ncol = 1,                 
-       xpd = TRUE,               
-       bty = "o",                
-       box.lwd = 1,              
-       box.col = "black")        
-
-dev.off()
-
-# Changing colors? 
-# Color families for the factors
-factor_colors <- list(
-  Factor1 = colorRampPalette(c("lightgreen", "darkgreen"))(5),  
-  Factor2 = colorRampPalette(c("lightgray", "darkgray"))(4),   
-  Factor3 = colorRampPalette(c("lightblue", "darkblue"))(4),   
-  Factor4 = colorRampPalette(c("lightcoral", "darkred"))(4)    
-)
-
-# Loadings and variables
-loadings <- fit_oblique_filtered$loadings
-variable_names <- rownames(loadings)
-
-## Initialization
-color_palette <- rep(NA, nrow(loadings))  # Placeholder for the colors
-color_counters <- list(Factor1 = 0, Factor2 = 0, Factor3 = 0, Factor4 = 0)  # Counters for colors
-
-# Iteration over the rows of loadings
-for (i in 1:nrow(loadings)) {
-  factor_index <- which.max(abs(loadings[i, ]))  # Factor with the highest loading
-  factor_name <- colnames(loadings)[factor_index]  # Name of the factor
-  
-  # Update counter and assign color
-  color_counters[[factor_name]] <- color_counters[[factor_name]] + 1
-  color_palette[i] <- factor_colors[[factor_name]][color_counters[[factor_name]]]
-}
-
-# Plot with the customized color scheme
-pdf(file.path(getwd(), "results", "fig2d.pairplot.pdf"), width = 11, height = 8.5)
-
-pairs(loadings, 
-      main = "Pair Plot of Factor Loadings", 
-      pch = 19,          
-      col = color_palette,  
-      labels = colnames(loadings),  
-      cex.labels = 1.5,  
-      font.labels = 2)   
-
-dev.off()
-
-# Create the legend
-pdf(file.path(getwd(), "results", "fig2d.legend.pdf"), width = 3, height = 4)
-
-# Initialize an empty plot
-plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1), 
-     xaxt = "n", yaxt = "n", bty = "n") 
-
-legend("center", 
-       legend = variable_names,  
-       col = color_palette,     
-       pch = 19,                 
-       title = "Variables",      
-       cex = 0.7,                
-       ncol = 1,                 
-       xpd = TRUE,               
-       bty = "o",                
-       box.lwd = 1,              
-       box.col = "black")        
+# 2.13.3 Pairwise factor plot: Create a pair plot matrix (all possible combinations of the factors are plotted against each other)
 
 
-dev.off()
-
-
-# Option 2: All Variable loading on one factor have one color and names of the variables are written inside the plot
-pdf(file.path(getwd(), "results", "fig2e.pairplot.pdf"), width = 15, height = 10.5)
+pdf(file.path(getwd(), "results", "suppl_fig2e.pairplot.pdf"), width = 15, height = 10.5)
 fa.plot(fit_oblique_filtered, 
         labels = rownames(fit_oblique_filtered$loadings), 
         cex = 0.8, 
         main = "Pair Plot of Factor Analysis")
 dev.off()
 
-# TODO: Would go with option 2 but in the supplement! 
 
 ## =================================================================================================
 # Part 3: Odds Ratios: 
-# Old: (How much more likely (or less likely) is an 'extremely or very negative' rating of the impact of Parkinson's disease on quality of life (QoL) across groups defined by different demographic and health-related characteristics?)
-# Please don't delete the comments marked with 'old' yet.
+# How much more likely (or less likely) is an 'extremely or very negative' rating of the impact of Parkinson's disease on quality of life (QoL) across groups defined by different demographic and health-related characteristics?
 
 # Preamble merging dataframes and checking for multicollinearity
 imputed_data_with_scores <- bind_cols(imputed_data, factor_scores)
@@ -548,11 +457,9 @@ factorsOR1 <- c("sex_r", "comorb_r", "disturbances_sleep_APD",
 # Extract data of interest into new dataframe and estimate (isolated) OR to the dv ("needed_healthcare_but_did_not_receive_it_duringCovid.C4")
 df_OR1_complete <- imputed_data_with_scores %>% dplyr::select(all_of(c(dependent_variable, factorsOR1))) # create dataframe with data of interest, that is dv and regressors
 
-# Old: (Does PD has an extremely or very negative influence on overall QoL?)
-# Old: ((Yes = 1,2, No = 3 (somewhat negative), 4 (not at all), 5,6,7 = positive))
+## How much more likely (or less likely) is an 'extremely or very negative' rating of the impact of Parkinson's disease on quality of life (QoL) across groups defined by different demographic and health-related characteristics?
+# (Extremely or very) negative = 1,2, positive = 3 (somewhat negative), 4 (not at all), 5 (somewhat positive)
 
-# How much more likely is a more positive rating of QoL (every answer except "extremly or very negative") depending on different demographic and health-related characteristics?
-# (extremely or very negative = 1,2, more positive = 3,4,5)
 
 df_OR1_complete <- df_OR1_complete %>%
   mutate(
@@ -582,7 +489,7 @@ df_OR1_complete <- convert_to_integer(df_OR1_complete, var_integer)
 
 results1 = c()
 for (fac in factorsOR1) { # for loop over factors of interest
-  mod <- as.formula(sprintf("I(dv=='positive') ~ %s", fac)) # formula for (unadjusted) GLM
+  mod <- as.formula(sprintf("I(dv=='negative') ~ %s", fac)) # formula for (unadjusted) GLM
   fit_temp = glm(mod, data=df_OR1_complete, family="binomial") # estimate model
   results1 = rbind(	results1, c(exp(coef(fit_temp)[2]), 	# OR
                                 exp(confint.default(fit_temp)[2]),  	# lower CI
@@ -606,8 +513,7 @@ results_OR1 <- results_OR1 %>% mutate(significance = case_when(pvalue <= .001 ~ 
 results_OR1
 
 
-# Visualization of (unadjusted) OR results
-# comment: haven't changed caption and title yet 
+# Visualization of (unadjusted) OR results 
 
 fac_names <- c("Gender*", "Comorbidity", "Sleep disturbances", 
                "Age", "Highes level of education", "Time since diagnosis", "Family status", 
@@ -618,16 +524,16 @@ results_OR1$factors <- fac_names
 results_OR1$significance <- factor(results_OR1$significance, levels = c('ns', 'p < .05', 'p < .001'))
 
 
-pdf(file.path(getwd(), "results", "test.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "fig5.OR.pdf"), width = 11, height = 8.5)
 fontsize = 15
 results_OR1 %>%
   dplyr::arrange(boxOdds) %>%
-  mutate(factors = factor(factors, levels = factors)) %>%  # Update der Faktorenlevels
+  mutate(factors = factor(factors, levels = factors)) %>%  # Update factor levels
   ggplot(aes(x = boxOdds, y = factors)) +
-  geom_vline(aes(xintercept = 1), size = .75, linetype = "dashed", color = "grey") +  # vertikale Linie für OR = 1
-  geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow), size = .5, height = .2, color = "gray50") +  # Fehlerbalken
-  geom_point(aes(x = boxOdds, y = factors, color = significance), size = 1.5, show.legend = TRUE) +  # Punkte basierend auf Signifikanz
-  guides(colour = guide_legend(reverse = TRUE)) +  # Legende umkehren
+  geom_vline(aes(xintercept = 1), size = .75, linetype = "dashed", color = "grey") +  # Vertical line for OR = 1
+  geom_errorbarh(aes(xmax = boxCIHigh, xmin = boxCILow), size = .5, height = .2, color = "gray50") +  # Error bars
+  geom_point(aes(x = boxOdds, y = factors, color = significance), size = 1.5, show.legend = TRUE) +  # Points based on significance
+  guides(colour = guide_legend(reverse = TRUE)) +  # Reverse legend order
   scale_colour_manual(values = c("p < .001" = "#6B340D", "p < .05" = "#B8A31F", "ns" = "#08306B")) +
   theme_minimal() +
   theme(text = element_text(size = 12),
@@ -652,7 +558,6 @@ results_OR1 %>%
   labs(title = "PD-patients' odds of extremely or very negative impact of PD on overall QoL",
        caption = "*Gender was coded so that OR > 1 means that being female indicates a higher risk of negative impact of PD on QoL")
 dev.off()
-#Reminder: adjust caption if necessary
 
 # TODO: these results look so incredibly cool and they fiut with what you yould expect !!! : D
 
@@ -810,7 +715,7 @@ partD4 <- ggplot(df6, aes(x = posfin, y = quantity6, fill = posfin)) +
                                             "D002_21" = "Religion")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5))
 
-pdf(file.path(getwd(), "results", "suppl_fig5a.partDpos.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "suppl_fig6a.partDpos.pdf"), width = 11, height = 8.5)
 ggarrange(partD1, partD2, partD3, partD4,
           ncol = 2, nrow = 2,
           labels = "AUTO",
@@ -921,7 +826,7 @@ partD8 <- ggplot(df10, aes(x = negfin, y = quantity10, fill = negfin)) +
                                             "D003_21" = "Religion")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5))
 
-pdf(file.path(getwd(), "results", "suppl_fig5b.partDneg.pdf"), width = 11, height = 8.5)
+pdf(file.path(getwd(), "results", "suppl_fig6b.partDneg.pdf"), width = 11, height = 8.5)
 ggarrange(partD5, partD6, partD7, partD8,
           ncol = 2, nrow = 2,
           labels = "AUTO",
@@ -931,7 +836,7 @@ dev.off()
 
 ## Part E: Missing LQ Domains (answers of open text question categorized)
 
-pdf(file.path(getwd(), "results", "suppl_fig6.partE.pdf"), width = 8, height = 5.5)
+pdf(file.path(getwd(), "results", "fig7.partE.pdf"), width = 8, height = 5.5)
 data_partE <- data.frame(
   partE = c("sport","coping mechanism","research","sexual life","profession","travel","pets","alternative medicine", "psychotherapeutic support"), 
   quantity = c(6, 5, 4, 4, 3, 2, 1, 1,2))
@@ -940,177 +845,4 @@ ggplot(data_partE, aes (x = partE, y = quantity, fill = quantity)) +
   labs(x = "Categories", y = "Count", title = "Part E", subtitle = "Additional QoL domains based on the answers in part E") +
   coord_flip() 
 dev.off()
-
-## =================================================================================================
-# (Part 3:  Ordinal logistic regression)
-
-# Preamble merging dataframes and checking for multicollinearity
-imputed_data_with_scores <- bind_cols(imputed_data, factor_scores)
-
-# 3.1: Define and convert selected variables to numeric
-var_indep <- c("sex_r", "comorb_r", "disturbances_sleep_APD", 
-               "age_r", "education_r_r", "time_from_diagnosis_r", "family_status_r_r", 
-               "living_area_r", "who5_depr_r", "ms_fluctuation_APD", "falls_r", 
-               "Factor1", "Factor2", "Factor3", "Factor4")
-imputed_data_with_scores <- imputed_data_with_scores %>%
-  mutate_at(vars(one_of(var_indep)), as.numeric)
-
-# 3.2: Calculate correlation matrix using Kendall's method and convert to long format
-subset_cor <- imputed_data_with_scores %>% dplyr::select(all_of(var_indep))
-korr_tab <- cor(subset_cor, use = "pairwise.complete.obs", method = "kendall")
-
-cor_data <- as.data.frame(as.table(korr_tab)) %>%
-  rename(Var1 = Var1, Var2 = Var2, Correlation = Freq)
-
-# 3.3: Add a column to highlight correlations above the threshold
-highlight_threshold <- 0.8
-cor_data <- cor_data %>%
-  mutate(Highlight = ifelse(abs(Correlation) > highlight_threshold, "Above Threshold", "Below Threshold"))
-
-# 3.4: Plot the correlation matrix with ggplot2, highlighting correlations above the threshold
-
-var_labels_regression <- c(
-  "sex_r" = "gender", 
-  "age_r" = "age",
-  "comorb_r" = "comorbidity", 
-  "disturbances_sleep_APD" = "sleep disturbances", 
-  "education_r_r" = "highest educational qualification",
-  "time_from_diagnosis_r" = "time since PD diagnosis", 
-  "family_status_r_r" = "family status",
-  "living_area_r" = "living area", 
-  "who5_depr_r" = "depressed mood", 
-  "ms_fluctuation_APD" = "motor symptoms fluctuation", 
-  "falls_r" = "falls",
-  "Factor1" = "Factor 1", 
-  "Factor2" = "Factor 2", 
-  "Factor3" = "Factor 3", 
-  "Factor4" = "Factor 4"
-)
-
-pdf(file.path(getwd(), "results", "suppl_fig3a.corrIndepVar.pdf"), width = 11, height = 8.5)
-ggplot(cor_data, aes(x = Var1, y = Var2, fill = Correlation)) +
-  geom_tile(color = "white") +                                   # Create tiles for each correlation pair
-  geom_text(aes(label = round(Correlation, 2), color = Highlight), size = 3) + # Color text for highlighted correlations
-  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0) +  # Color gradient for correlations
-  scale_color_manual(values = c("Above Threshold" = "black", "Below Threshold" = "grey50")) + # Text color for highlight
-  labs(title = "Correlation Matrix with Highlights", x = "", y = "") +
-  scale_x_discrete(labels = var_labels_regression) + 
-  scale_y_discrete(labels = var_labels_regression) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.text.y = element_text(size = 10),
-    plot.title = element_text(hjust = 0.5)
-  )
-dev.off()
-
-#TODO: I would only keep the lower triangle since both are symmetric. I would get rid of the diagonal by zeroing it out and you don't really need the highlights, since there is no "above or below threshold", is there?
-
-## ================================================
-# Variables coded as ordinal
-var_ord <- c("age_r", "time_from_diagnosis_r", 
-             "living_area_r", "education_r_r")
-
-for (variable in var_ord) {
-  imputed_data_with_scores[[variable]] <-  factor(imputed_data_with_scores[[variable]], ordered = TRUE)
-}
-
-# Variables coded as nominal
-var_fac <- c("sex_r", "family_status_r_r", "falls_r", "comorb_r", "disturbances_sleep_APD",
-             "ms_fluctuation_APD")
-
-for (variable in var_fac) {
-  imputed_data_with_scores[[variable]] <-  as.factor(imputed_data_with_scores[[variable]])
-}
-
-## ================================================
-# Interaction
-# Performing moderator analysis with all variables and their interaction to find significant interactions, which we can include in our final model
-# source: https://stats.stackexchange.com/questions/497318/how-to-perform-moderator-analysis-in-ordinal-logistic-regression
-
-
-imputed_data_with_scores$qol_sum_disease_r <- as.factor(imputed_data_with_scores$qol_sum_disease_r)
-
-# List of independent variables
-independent_vars_interaction <- c("sex_r", "comorb_r", "age_r",
-                                  "living_area_r", "who5_depr_r", "ms_fluctuation_APD",
-                                  "Factor1", "Factor2", "Factor3", "Factor4")
-
-# Formula for the clm model with all interactions
-formula <- as.formula(paste("qol_sum_disease_r ~ (", paste(independent_vars_interaction, collapse = " + "), ")^2"))
-
-# Fitting the model with clm and all interactions
-interaction_model <- clm(formula, data = imputed_data_with_scores, Hess = TRUE, link =c("logit"))
-
-# Summary of the model
-summary(interaction_model)
-
-
-## =================================================
-# Ordinal logistic regression with polr: Does Parkinsons Disease influence your quality of life?
-
-imputed_data_with_scores$qol_sum_disease_r <- as.factor(imputed_data_with_scores$qol_sum_disease_r)
-m1 <- polr(qol_sum_disease_r ~ sex_r + age_r + ms_fluctuation_APD + comorb_r + 
-             living_area_r + who5_depr_r + Factor1 + Factor2 + Factor3 + Factor4 +
-             sex_r:comorb_r + sex_r:living_area_r + comorb_r:age_r + age_r:ms_fluctuation_APD +
-             age_r:Factor3 + living_area_r:ms_fluctuation_APD + living_area_r:Factor2 + 
-             living_area_r:Factor3 + Factor3:Factor4,
-           data = imputed_data_with_scores, Hess = TRUE)
-
-
-summary(m1)
-
-#creating p values
-##store table
-(ctable <- coef(summary(m1)))
-
-## calculate and store p values
-p1 <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
-## combined table
-(ctable <- cbind(ctable, "p value" = p1))
-## odds ratios
-(ci <- confint(m1))
-confint.default(m1) #konfidenzindervalle
-exp(coef(m1))
-exp(cbind(OR = coef(m1), ci))
-
-# Ruling out multicollinearity (again)
-vif(m1)
-
-# Testing proportional odds assumption 
-brant.test(m1)
-
-# Calculating pseudo R^2 to evaluate goodness of fit
-pR2(m1)
-
-## ================================================
-#Stepwise model selection by AIC
-#source: https://rforpoliticalscience.com/2020/10/23/choose-model-variables-by-aic-in-a-stepwise-algorithm-with-the-mass-package-in-r/
-m1_simplified <- stepAIC(m1, direction = "both")
-summary(m1_simplified)
-
-#creating p values
-##store table
-(ctable_m1_simplified <- coef(summary(m1_simplified)))
-
-## calculate and store p values
-p1_m1_simplified <- pnorm(abs(ctable_m1_simplified[, "t value"]), lower.tail = FALSE) * 2
-## combined table
-(ctable_m1_simplified <- cbind(ctable_m1_simplified, "p value" = p1_m1_simplified))
-## odds ratios
-(ci_m1_simplified <- confint(m1_simplified))
-confint.default(m1_simplified) #konfidenzindervalle
-exp(coef(m1_simplified))
-exp(cbind(OR = coef(m1_simplified), ci_m1_simplified))
-
-# Ruling out multicollinearity (again)
-vif(m1_simplified)
-
-# Testing proportional odds assumption 
-brant.test(m1_simplified)
-
-# Calculating pseudo R^2 to evaluate goodness of fit
-pR2(m1_simplified)
-
-
 
