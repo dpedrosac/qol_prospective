@@ -7,10 +7,12 @@ and versioning reflects analytical milestones rather than semantic releases.
 
 ---
 
-## [2.6] - 2024-12-25
+## [2.6] - 2024-12-28
 ### Changed
 - Updated labels of factors
 - Revised export of analysis results
+- Formatted everything uniformly and changed files' nomenclature
+- revised correlation heatmaps (before EFA) and appearances of other plots
 
 ---
 
