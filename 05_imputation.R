@@ -5,7 +5,7 @@ df_before_imputation <- df_recoded %>%
   dplyr::select(
     age_r, sex_r, living_area_r, education_r_r, financial_stability_r, 
     family_status_r_r, living_situation_r_r, age_at_diagnosis_r, 
-    time_from_diagnosis_r, who5_depr_r, comorb_r, disturbances_sleep_APD, 
+    time_from_diagnosis_r, who5_depr_score, comorb_r, disturbances_sleep_APD, 
     falls_r, assist_mov_r, ms_fluctuation_APD, qol_sum_disease_r, 
     qol_ms_r, qol_nms_r, qol_conditions_r, qol_gain_r, qol_loss_independence_r, 
     qol_unpredict_r, qol_invasive_therapy_r, qol_other_therapy_r, 
@@ -22,7 +22,7 @@ total_values <- prod(dim(df_before_imputation))
 missing_percentage <- (total_missing / total_values) * 100
 
 # Output the percentage of missing values
-cat("Percentage of missing valus in selected variables for analysis:", missing_percentage, "%\n")
+cat("Percentage of missing values in selected variables for analysis:", missing_percentage, "%\n")
 
 pdf(file.path(getwd(), "results", "suppl_fig1.aggr_plot_output.pdf"), width = 11, height = 8.5)  # Save the aggr plot output to a PDF file in landscape orientation
 

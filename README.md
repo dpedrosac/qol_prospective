@@ -50,3 +50,16 @@ University Hospital Giessen and Marburg
 Medical Student, Philipps University Marburg 
 Working Group: Movement Disorders and Neuromodulation 
 Email: [Moormann@students.uni-marburg.de](mailto:Moormann@students.uni-marburg.de)
+
+## Changelog
+
+All changes to this project are documented in
+[`CHANGELOG.md`](CHANGELOG.md).
+
+The changelog provides a chronological overview of:
+- additions and revisions of statistical analyses,
+- changes to data preprocessing and recoding,
+- updates to visualizations and result exports,
+- methodological decisions (e.g., inclusion or removal of analyses).
+
+Further details and smaller code refinements can be tracked via the git commit history.

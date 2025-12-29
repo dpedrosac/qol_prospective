@@ -6,8 +6,8 @@
 # ==================================================================================================
 ## Specify packages of interest and load them automatically if needed
 packages = c(
-			"sf", "dplyr", "Rcpp", "RColorBrewer", "XML", "ggmap", "tidyverse", "readxl",
-			"viridis", "stringr", "spdep", "proj4", "ggplot2", "R6", "readr", "maps", "stringr",
+			"sf", "dplyr", "RColorBrewer", "XML", "ggmap", "tidyverse", "readxl",
+			"viridis", "stringr", "spdep", "proj4", "ggplot2", "readr", "maps", "stringr",
 			"sf", "terra", "mapproj", "classInt", "ggthemes") # packages which may be needed over the course
 
 ## Load or install all packages defined above
@@ -24,9 +24,9 @@ package.check <- lapply(
 # ==================================================================================================
 ## In case of multiple people working on one project, this helps to create an automatic script
 username = Sys.info()["login"]
-if (username == "dpedr") {
+if (username == "dpedrosac") {
 wdir = "D:/qol_prospective/"
-} else if (username == "dpedrosac") {
+} else if (username == "david") {
 wdir = "/media/storage/qol_prospective/"
 }
 setwd(wdir)
@@ -54,12 +54,12 @@ df_KBV <- df_KBV %>% # pad postal codes with leading zeros if necessary
 
 # Select columns of interest, convert Regionstyp to character, and separate data into different data frames based on Regionstyp
 df_KBV_kreise <- df_KBV %>%
-  select(all_of(cols_of_interest)) %>%
+  dplyr::select(all_of(cols_of_interest)) %>%
   mutate(Regionstyp = as.character(Regionstyp)) %>%
   filter(Regionstyp == "Kreise")
 
 df_KBV_ROregionen <- df_KBV %>%
-  select(all_of(cols_of_interest)) %>%
+  dplyr::select(all_of(cols_of_interest)) %>%
   mutate(Regionstyp = as.character(Regionstyp)) %>%
   filter(Regionstyp == "Raumordnungsregionen")
 
@@ -73,7 +73,7 @@ df_ROregionen <- read.csv2(file.path(wdir, "data", "raumordnungsregionen_mod.csv
 df_plz2kreis <- read.csv2(file.path(wdir, "data", "zuordnung_plz_ort_landkreis.csv"))
 df_plz2kreis <- df_plz2kreis %>%
   mutate(plz3 = str_pad(plz3, width = 3, side = "left", pad = "0")) %>% # adds padding "0" to the left
-  mutate(plz2 = str_pad(plz2, width = 2, side = "left", pad = "0")) # adds padding "0" to the left
+  mutate(plz2 = str_pad(plz3, width = 2, side = "left", pad = "0")) # adds padding "0" to the left
 
 # ==================================================================================================
 ## 3. Merge dataframes to one dataframe
@@ -285,7 +285,7 @@ fig <- ggplot(data=merge.shp) +
     theme(
       legend.position = c(0.5, 0.03),
       legend.text.align = 0,
-      legend.background = element_rect(fill = alpha('white', 0.0)),
+      legend.background = element_rect(fill = scales::alpha('white', 0.0)),
       legend.text = element_text(hjust = 0, color = "#4e4d47", size= 18),
       plot.title = element_text(hjust = 0.5, color = "#4e4d47", size =24),
       plot.subtitle = element_text(hjust = 0.5, color = "#4e4d47", size=18,
@@ -389,7 +389,7 @@ fig2 <- ggplot(data=merge.shp) +
     theme(
       legend.position = c(0.5, 0.03),
       legend.text.align = 0,
-      legend.background = element_rect(fill = alpha('white', 0.0)),
+      legend.background = element_rect(fill = scales::alpha('white', 0.0)),
       legend.text = element_text(hjust = 0, color = "#4e4d47", size=18),
       plot.title = element_text(hjust = 0.5, color = "#4e4d47", size=24),
       plot.subtitle = element_text(hjust = 0.5, color = "#4e4d47", size=18, 
