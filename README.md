@@ -63,3 +63,7 @@ The changelog provides a chronological overview of:
 - methodological decisions (e.g., inclusion or removal of analyses).
 
 Further details and smaller code refinements can be tracked via the git commit history.
+
+## Use of Large Language Models
+
+This project made limited use of large language models to assist with code formatting, refactoring, and documentation. The models served as a technical support tool and did not replace human judgment. All analyses, statistical modeling, and scientific conclusions were designed, verified, and interpreted by the authors. Responsibility for the correctness and integrity of the code and results lies entirely with the authors.
