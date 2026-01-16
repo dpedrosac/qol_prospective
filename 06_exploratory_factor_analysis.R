@@ -318,7 +318,7 @@ print(fit_oblique, digits = 2, sort = TRUE) #cutoff = 0.3 vor sort= TRUE
 # Extracted Factors:
   # social life
   # restrictions/ physical limitations/ disadvantages
-  # influence of PD on identity, thoughts and feelings/Gefühlslage/Innere Haltung/mindset/ emotional state
+  # influence of PD on identity, thoughts and feelings/mindset/ emotional state
   # medication for PD
 
 
@@ -487,8 +487,6 @@ fa_table <- function(x, cut) {
   return(result_table)
 }
 
-# proportion_variance <- fit_oblique_filtered$PVAL["Proportion Var",] #TODO: remove?
-
 # Use function "fa_table" with new EFA results and cut-off (e.g. 0.3)
 efa_table_final <- fa_table(fit_oblique_filtered, cut = 0.3)
 efa_table <- fa_table(fit_oblique, cut = 0.3)
@@ -550,7 +548,7 @@ setColWidths(wb4b, "efa_factor_correlations", cols = 1:ncol(factor_correlation_w
 saveWorkbook(wb4b, file = file.path(getwd(), "results", "efa_factor_correlations.xlsx"), overwrite = TRUE)
 
 
-# Attention: Change names of factors in excel-file (factor structure changes when imputation is rerun)
+# Attention: Change names of factors in excel-file (factor structure changes when imputation is slightly rerun)
 # For correct factor name check:
 cat("Renamed Factors:\n")
 print(new_factor_names)

@@ -26,8 +26,8 @@ username <- Sys.info()[["login"]]
 
 dir_map <- list(
   Leonie = list(
-    wdir = "C:/Users/Leonie/HESSENBOX/Daten/analysis_R",
-    data_dir = "C:/Users/Leonie/HESSENBOX/Daten/analysis_R"
+    wdir = "C:/Users/Leonie/Nextcloud/Moormann@students.uni-marburg.de/Daten/github",
+    data_dir = "C:/Users/Leonie/Nextcloud/Moormann@students.uni-marburg.de/Daten/github"
   ),
   dpedrosac = list(
     wdir = "D:/qol_prospective",

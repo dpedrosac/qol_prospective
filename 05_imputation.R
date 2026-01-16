@@ -5,7 +5,7 @@ df_before_imputation <- df_recoded %>%
   dplyr::select(
     age_r, sex_r, living_area_r, education_r_r, financial_stability_r, 
     family_status_r_r, living_situation_r_r, age_at_diagnosis_r, 
-    time_from_diagnosis_r, who5_depr_score, comorb_r, disturbances_sleep_APD, 
+    time_from_diagnosis_r, who5_depr, comorb_r, disturbances_sleep_APD, 
     falls_r, assist_mov_r, ms_fluctuation_APD, qol_sum_disease_r, 
     qol_ms_r, qol_nms_r, qol_conditions_r, qol_gain_r, qol_loss_independence_r, 
     qol_unpredict_r, qol_invasive_therapy_r, qol_other_therapy_r, 
@@ -72,18 +72,6 @@ generate_imputation <- mice(
   maxit = 5,             # Number of iterations
   diagnostics = TRUE     # Enable diagnostics
 )
-
-
-# Generate and save density plot to PDF in landscape orientation
-#pdf(file.path(getwd(), "results", "suppl_fig1b.densityplots_afterimputation.pdf"), width = 11, height = 8.5)
-
-#densityplot(
- # generate_imputation,
-  #xlim = c(0, 7),    # Set x-axis range for density plot
-  #ylim = c(0, 1)   # Set y-axis range for density plot
-#)
-
-#dev.off()  # Close the PDF device to save the file
 
 
 imputed_data <- complete(generate_imputation, 1)

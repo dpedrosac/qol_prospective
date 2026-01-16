@@ -39,7 +39,7 @@ dependent_variable <- "qol_sum_disease_r"
 predictors <- c(
   "sex_r", "comorb_r", "disturbances_sleep_APD",
   "age_r", "education_r_r", "time_from_diagnosis_r", "family_status_r_r",
-  "living_area_r", "who5_depr_score", "ms_fluctuation_APD", "falls_r",
+  "living_area_r", "who5_depr", "ms_fluctuation_APD", "falls_r",
   "social_contacts", "medication", "restrictions", "mindset"
 )
 
@@ -53,7 +53,7 @@ predictor_labels <- c(
   time_from_diagnosis_r = "Time since diagnosis",
   family_status_r_r = "Living with a partner",
   living_area_r = "Area of residence (city to rural living)",
-  who5_depr_score = "Depressed mood",
+  who5_depr = "Depressed mood (WHO-5 ≤ 12)",
   ms_fluctuation_APD = "Fluctuation of motor symptoms",
   falls_r = "Falls",
   social_contacts = "Positive rating of 'Social contacts' for QoL",
@@ -66,6 +66,7 @@ predictor_labels <- c(
 fontsize <- 18
 x_limits <- c(0.08, 40)
 x_breaks <- c(0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10, 20, 40)
+
 
 # -------------------------------------------------------------------------
 # Helpers
@@ -220,7 +221,7 @@ df_or <- imputed_data_with_scores |>
 vars_integer <- c(
   "sex_r", "comorb_r", "disturbances_sleep_APD",
   "age_r", "education_r_r", "time_from_diagnosis_r", "family_status_r_r",
-  "living_area_r", "who5_depr_score", "ms_fluctuation_APD", "falls_r"
+  "living_area_r", "who5_depr", "ms_fluctuation_APD", "falls_r"
 )
 vars_integer <- intersect(vars_integer, names(df_or))
 df_or[vars_integer] <- lapply(df_or[vars_integer], function(x) as.integer(as.character(x)))
@@ -239,6 +240,7 @@ if (flag_check) {
   print(results_or)
 }
 
+results_or
 # -------------------------------------------------------------------------
 # 4) Optional visualization
 # -------------------------------------------------------------------------
