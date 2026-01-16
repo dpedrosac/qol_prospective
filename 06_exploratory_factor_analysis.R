@@ -14,6 +14,7 @@
 #
 # Last updated:
 #   2024-12-25
+#   2026-01-05
 #
 # R version:
 #   >= 4.3.1
@@ -263,13 +264,13 @@ if (plot_corr) {
     plot_cor_pairs(cor_long, outfile, label_threshold = label_threshold)
 
   } else if (corr_plot_type == "heatmap") {
-    #outfile <- file.path(out_dir, "fig1a.corrEFA_heatmap.pdf")
+    outfile <- file.path(out_dir, "fig1a.corrEFA_heatmap.pdf")
     plot_cor_heatmap(
       cor_matrix,
       out_base = file.path(getwd(), "results", "fig1a.corrEFA_heatmap"),
       formats = c("pdf", "png")
  )
-    # plot_cor_heatmap(cor_matrix, outfile)
+     plot_cor_heatmap(cor_matrix, outfile)
 
   } else {
     warning(sprintf("Unknown corr_plot_type='%s'. Use 'pairs' or 'heatmap'.", corr_plot_type))
@@ -303,7 +304,7 @@ plot(results.eigenvalues,
   pch = 19,
   type = "b",
   ylab="Eigenvalue of factor analysis",
-  xlab="Factor number",
+  xlab="Factor nu------mber",
   main = "Scree Plot")
 abline(v=4, col="red")
 abline(h=1)
@@ -340,26 +341,6 @@ filtered_data_EFA <- data_EFA[, items_to_keep]
 fit_oblique_filtered <- factanal(filtered_data_EFA, efa_config$n_factors, rotation="promax", scores = "regression")
 print(fit_oblique_filtered, digits=2, sort=TRUE) #cutoff = 0.3 vor sort= TRUE
 results.fit_oblique <- fit_oblique_filtered
-
-
-# Again: Check for factor loading < 0.4 and exclude variables with factor loading < 0.4
-# Extract the factor loadings
-#loadings_matrix_filtered <- fit_oblique_filtered$loadings
-
-# Again: Threshold for factor loadings
-#threshold <- efa_config$loading_threshold
-
-# Again: Check if the maximum loading of an item is >= 0.4
-#new_items_to_keep <- apply(loadings_matrix_filtered, 1, function(x) any(abs(x) >= threshold))
-
-# Again: Create a new dataset with the filtered items
-#new_filtered_data_EFA <- filtered_data_EFA[, new_items_to_keep]
-
-
-# Again: Perform the EFA again
-# new_fit_oblique_filtered <- factanal(new_filtered_data_EFA, 4, rotation="promax", scores = "regression")
-# print(new_fit_oblique_filtered, digits=2, cutoff=0.3, sort=TRUE)
-#results.fit_oblique <- fit_oblique_filtered
 
 
 # 2.10 Dynamic Renaming of Factors Based on Marker Variables: Assigning Factor Names According to the Corresponding Marker Variables
